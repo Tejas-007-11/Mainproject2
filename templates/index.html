@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osteoarthritis Drug Response Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .medical-gradient {
+            background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 50%, #10b981 100%);
+        }
+        
+        .card-shadow {
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .input-focus:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .glow {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+        
+        .result-card {
+            background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%);
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #06b6d4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        
+        .tooltip {
+            position: relative;
+        }
+        
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+    <!-- Header -->
+    <header class="medical-gradient text-white py-6 shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <div>
+                        <h1 class="text-2xl font-bold">OA Drug Response Predictor</h1>
+                        <p class="text-sm opacity-90">AI-Powered Treatment Analysis</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="px-3 py-1 bg-white bg-opacity-20 rounded-full text-sm">
+                        <span class="pulse-animation inline-block w-2 h-2 bg-green-300 rounded-full mr-2"></span>
+                        System Active
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Main Grid -->
+        <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Input Form -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl p-6 card-shadow">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Patient Information</h2>
+                        <button onclick="resetForm()" class="text-sm text-cyan-600 hover:text-cyan-700 font-medium">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            Reset
+                        </button>
+                    </div>
+
+                    <form id="predictionForm" class="space-y-6">
+                        <!-- Demographics -->
+                        <div class="border-l-4 border-cyan-500 pl-4">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Demographics</h3>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Age (years)</label>
+                                    <input type="number" id="age" required min="18" max="100" 
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                                    <select id="gender" required 
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">BMI (kg/m²)</label>
+                                    <input type="number" id="bmi" required step="0.1" min="15" max="50"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Clinical Parameters -->
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Clinical Parameters</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pain Severity (1-10)</label>
+                                    <input type="number" id="severity" required min="1" max="10"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Symptom Duration (months)</label>
+                                    <input type="number" id="duration" required min="0"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">CRP Level (mg/L)</label>
+                                    <input type="number" id="crp" required step="0.1" min="0"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">ESR (mm/hr)</label>
+                                    <input type="number" id="esr" required min="0"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Treatment Information -->
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Treatment Details</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Drug Type</label>
+                                    <select id="drug" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Dosage Level</label>
+                                    <select id="dosage" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Treatment Duration (months)</label>
+                                    <input type="number" id="treat_months" required min="0"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lifestyle Factors -->
+                        <div class="border-l-4 border-green-500 pl-4">
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Lifestyle Factors</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Activity Level</label>
+                                    <select id="activity" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Diet Score (1-10)</label>
+                                    <input type="number" id="diet_score" required min="1" max="10"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Smoking Status</label>
+                                    <select id="smoke" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Alcohol Consumption</label>
+                                    <select id="alcohol" required
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus transition">
+                                        <option value="">Select...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="pt-4">
+                            <button type="submit" id="predictBtn"
+                                class="w-full medical-gradient text-white py-4 px-6 rounded-xl font-semibold text-lg hover:shadow-lg transition transform hover:-translate-y-0.5 flex items-center justify-center space-x-2">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                </svg>
+                                <span>Analyze Treatment Response</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="lg:col-span-1">
+                <!-- Quick Stats -->
+                <div class="bg-white rounded-2xl shadow-xl p-6 mb-6 card-shadow">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">System Status</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Model Accuracy</span>
+                            <span class="font-semibold text-green-600">94.2%</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Predictions Made</span>
+                            <span class="font-semibold text-blue-600" id="predCount">0</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Last Updated</span>
+                            <span class="text-xs text-gray-500">Jan 2025</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Card -->
+                <div id="resultsCard" class="hidden bg-white rounded-2xl shadow-xl p-6 card-shadow fade-in">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">Prediction Results</h3>
+                        <button onclick="downloadPDF()" class="text-cyan-600 hover:text-cyan-700 transition tooltip" data-tooltip="Download Report">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div id="resultContent"></div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="loadingCard" class="hidden bg-white rounded-2xl shadow-xl p-6 card-shadow">
+                    <div class="flex flex-col items-center justify-center py-8">
+                        <div class="loading-spinner mb-4"></div>
+                        <p class="text-gray-600 font-medium">Analyzing patient data...</p>
+                        <p class="text-sm text-gray-500 mt-2">Processing treatment response prediction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let predictionCount = 0;
+        let currentResult = null;
+
+        // Load dropdown options on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/get_options');
+                const options = await response.json();
+                
+                // Populate dropdowns
+                populateSelect('gender', options.Gender);
+                populateSelect('drug', options.Drug_Type);
+                populateSelect('dosage', options.Dosage_Level);
+                populateSelect('activity', options.Activity_Level);
+                populateSelect('smoke', options.Smoking_Status);
+                populateSelect('alcohol', options.Alcohol_Consumption);
+            } catch (error) {
+                console.error('Error loading options:', error);
+                showNotification('Failed to load form options', 'error');
+            }
+        });
+
+        function populateSelect(id, options) {
+            const select = document.getElementById(id);
+            options.forEach(option => {
+                const opt = document.createElement('option');
+                opt.value = option;
+                opt.textContent = option;
+                select.appendChild(opt);
+            });
+        }
+
+        // Form submission
+        document.getElementById('predictionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Show loading
+            document.getElementById('loadingCard').classList.remove('hidden');
+            document.getElementById('resultsCard').classList.add('hidden');
+            
+            // Collect form data
+            const formData = {
+                age: parseInt(document.getElementById('age').value),
+                gender: document.getElementById('gender').value,
+                bmi: parseFloat(document.getElementById('bmi').value),
+                severity: parseInt(document.getElementById('severity').value),
+                duration: parseInt(document.getElementById('duration').value),
+                crp: parseFloat(document.getElementById('crp').value),
+                esr: parseInt(document.getElementById('esr').value),
+                drug: document.getElementById('drug').value,
+                dosage: document.getElementById('dosage').value,
+                treat_months: parseInt(document.getElementById('treat_months').value),
+                activity: document.getElementById('activity').value,
+                diet_score: parseInt(document.getElementById('diet_score').value),
+                smoke: document.getElementById('smoke').value,
+                alcohol: document.getElementById('alcohol').value
+            };
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Prediction failed');
+                }
+                
+                const result = await response.json();
+                currentResult = result;
+                
+                // Update prediction count
+                predictionCount++;
+                document.getElementById('predCount').textContent = predictionCount;
+                
+                // Display results
+                displayResults(result);
+                
+                // Hide loading, show results
+                setTimeout(() => {
+                    document.getElementById('loadingCard').classList.add('hidden');
+                    document.getElementById('resultsCard').classList.remove('hidden');
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Prediction error:', error);
+                document.getElementById('loadingCard').classList.add('hidden');
+                showNotification('Prediction failed. Please try again.', 'error');
+            }
+        });
+
+        function displayResults(result) {
+            const response = result.predicted_response;
+            const probs = result.probabilities;
+            
+            let color = 'blue';
+            let icon = '✓';
+            if (response.toLowerCase().includes('good') || response.toLowerCase().includes('excellent')) {
+                color = 'green';
+                icon = '✓';
+            } else if (response.toLowerCase().includes('poor') || response.toLowerCase().includes('none')) {
+                color = 'red';
+                icon = '!';
+            } else {
+                color = 'yellow';
+                icon = '~';
+            }
+            
+            let html = `
+                <div class="result-card rounded-xl p-6 mb-4">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-${color}-500 rounded-full flex items-center justify-center text-white text-2xl font-bold glow">
+                            ${icon}
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Predicted Response</p>
+                            <p class="text-xl font-bold text-${color}-600">${response}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-3 mb-6">
+                    <h4 class="font-semibold text-gray-700 text-sm">Confidence Levels</h4>
+            `;
+            
+            // Sort probabilities
+            const sortedProbs = Object.entries(probs).sort((a, b) => b[1] - a[1]);
+            
+            sortedProbs.forEach(([label, prob]) => {
+                const percentage = (prob * 100).toFixed(1);
+                const barColor = label === response ? 'bg-cyan-500' : 'bg-gray-300';
+                
+                html += `
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-600">${label}</span>
+                            <span class="font-semibold text-gray-800">${percentage}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="${barColor} h-2 rounded-full progress-bar" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+            
+            // Add recommendation based on response
+            let recommendation = '';
+            if (response.toLowerCase().includes('excellent') || response.toLowerCase().includes('good')) {
+                recommendation = '<div class="bg-green-50 border-l-4 border-green-500 p-4 rounded"><p class="text-sm text-green-800"><strong>Recommendation:</strong> Continue current treatment plan. Patient showing positive response to medication.</p></div>';
+            } else if (response.toLowerCase().includes('moderate')) {
+                recommendation = '<div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded"><p class="text-sm text-yellow-800"><strong>Recommendation:</strong> Monitor closely. Consider dosage adjustment or alternative therapies if no improvement.</p></div>';
+            } else {
+                recommendation = '<div class="bg-red-50 border-l-4 border-red-500 p-4 rounded"><p class="text-sm text-red-800"><strong>Recommendation:</strong> Consult specialist for treatment review. Current medication may not be effective.</p></div>';
+            }
+            
+            html += recommendation;
+            
+            document.getElementById('resultContent').innerHTML = html;
+        }
+
+        function downloadPDF() {
+            if (!currentResult) return;
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Header
+            doc.setFillColor(6, 182, 212);
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.text('OA Drug Response Report', 105, 20, { align: 'center' });
+            doc.setFontSize(12);
+            doc.text('AI-Powered Treatment Analysis', 105, 30, { align: 'center' });
+            
+            // Reset color
+            doc.setTextColor(0, 0, 0);
+            
+            let y = 50;
+            
+            // Prediction Result
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('Prediction Result', 20, y);
+            y += 10;
+            
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Predicted Response: ${currentResult.predicted_response}`, 20, y);
+            y += 15;
+            
+            // Confidence Levels
+            doc.setFont(undefined, 'bold');
+            doc.text('Confidence Levels:', 20, y);
+            y += 8;
+            doc.setFont(undefined, 'normal');
+            
+            const sortedProbs = Object.entries(currentResult.probabilities).sort((a, b) => b[1] - a[1]);
+            sortedProbs.forEach(([label, prob]) => {
+                doc.text(`${label}: ${(prob * 100).toFixed(1)}%`, 25, y);
+                y += 6;
+            });
+            
+            y += 10;
+            
+            // Patient Information
+            doc.setFont(undefined, 'bold');
+            doc.text('Patient Information', 20, y);
+            y += 8;
+            doc.setFont(undefined, 'normal');
+            
+            const data = currentResult.input_data;
+            doc.text(`Age: ${data.age} years | Gender: ${data.gender} | BMI: ${data.bmi}`, 20, y);
+            y += 6;
+            doc.text(`Pain Severity: ${data.severity}/10 | Duration: ${data.duration} months`, 20, y);
+            y += 6;
+            doc.text(`CRP: ${data.crp} mg/L | ESR: ${data.esr} mm/hr`, 20, y);
+            y += 10;
+            
+            // Treatment Details
+            doc.setFont(undefined, 'bold');
+            doc.text('Treatment Details', 20, y);
+            y += 8;
+            doc.setFont(undefined, 'normal');
+            doc.text(`Drug: ${data.drug} | Dosage: ${data.dosage}`, 20, y);
+            y += 6;
+            doc.text(`Treatment Duration: ${data.treat_months} months`, 20, y);
+            y += 10;
+            
+            // Lifestyle
+            doc.setFont(undefined, 'bold');
+            doc.text('Lifestyle Factors', 20, y);
+            y += 8;
+            doc.setFont(undefined, 'normal');
+            doc.text(`Activity: ${data.activity} | Diet Score: ${data.diet_score}/10`, 20, y);
+            y += 6;
+            doc.text(`Smoking: ${data.smoke} | Alcohol: ${data.alcohol}`, 20, y);
+            
+            // Footer
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 280, { align: 'center' });
+            doc.text('This report is for informational purposes only. Consult a healthcare professional.', 105, 285, { align: 'center' });
+            
+            // Save
+            doc.save('OA_Drug_Response_Report.pdf');
+            showNotification('Report downloaded successfully!', 'success');
+        }
+
+        function resetForm() {
+            document.getElementById('predictionForm').reset();
+            document.getElementById('resultsCard').classList.add('hidden');
+            currentResult = null;
+            showNotification('Form reset', 'info');
+        }
+
+        function showNotification(message, type) {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 fade-in`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
